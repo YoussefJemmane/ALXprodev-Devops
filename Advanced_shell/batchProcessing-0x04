@@ -47,6 +47,10 @@ for pokemon in "${POKEMON_LIST[@]}"; do
     pids+=($!)
 done
 
+# Show current background jobs
+echo "Current background jobs:"
+jobs
+
 # Wait for all background processes to complete
 echo "Waiting for all parallel processes to complete..."
 failed_count=0
@@ -55,13 +59,23 @@ for i in "${!pids[@]}"; do
     pid=${pids[$i]}
     pokemon=${POKEMON_LIST[$i]}
     
-    if wait $pid; then
-        echo "Process for $pokemon completed successfully"
+    # Check if process is still running before waiting
+    if kill -0 $pid 2>/dev/null; then
+        echo "Waiting for $pokemon process (PID: $pid)..."
+        if wait $pid; then
+            echo "Process for $pokemon completed successfully"
+        else
+            echo "Process for $pokemon failed"
+            failed_count=$((failed_count + 1))
+        fi
     else
-        echo "Process for $pokemon failed"
-        failed_count=$((failed_count + 1))
+        echo "Process for $pokemon already completed"
     fi
 done
+
+# Show jobs status after completion
+echo "Final jobs status:"
+jobs
 
 # Summary
 total_pokemon=${#POKEMON_LIST[@]}

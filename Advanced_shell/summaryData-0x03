@@ -18,11 +18,13 @@ echo "Name,Height (m),Weight (kg)" > "$CSV_FILE"
 # Process each JSON file and extract data
 for json_file in "$DATA_DIR"/*.json; do
     if [ -f "$json_file" ]; then
-        name=$(jq -r '.name' "$json_file" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+        # Extract name and format using sed and awk
+        name=$(jq -r '.name' "$json_file" | sed 's/.*/\L&/' | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
         height=$(jq -r '.height' "$json_file" | awk '{printf "%.1f", $1/10}')
         weight=$(jq -r '.weight' "$json_file" | awk '{printf "%.1f", $1/10}')
         
-        echo "$name,$height,$weight" >> "$CSV_FILE"
+        # Use sed to clean up any unwanted characters in the output
+        echo "$name,$height,$weight" | sed 's/[[:space:]]*$//' >> "$CSV_FILE"
     fi
 done
 
