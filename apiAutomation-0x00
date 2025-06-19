@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# API Request Automation Script
+# Fetch Pikachu data from Pokemon API
+
+API_URL="https://pokeapi.co/api/v2/pokemon/pikachu"
+OUTPUT_FILE="data.json"
+ERROR_FILE="errors.txt"
+
+echo "Fetching Pikachu data from Pokemon API..."
+
+# Make API request using curl
+if curl -s -f "$API_URL" -o "$OUTPUT_FILE"; then
+    echo "Successfully fetched Pikachu data and saved to $OUTPUT_FILE"
+else
+    echo "$(date): Failed to fetch data from $API_URL" >> "$ERROR_FILE"
+    echo "Error: Failed to fetch Pikachu data. Check $ERROR_FILE for details."
+    exit 1
+fi
+

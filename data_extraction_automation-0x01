@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Data Extraction Script
+# Extract specific Pokemon data from JSON and format it
+
+JSON_FILE="data.json"
+
+if [ ! -f "$JSON_FILE" ]; then
+    echo "Error: $JSON_FILE not found. Please run the API automation script first."
+    exit 1
+fi
+
+# Extract data using jq and format using awk and sed
+name=$(jq -r '.name' "$JSON_FILE" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+height=$(jq -r '.height' "$JSON_FILE" | awk '{printf "%.1f", $1/10}')
+weight=$(jq -r '.weight' "$JSON_FILE" | awk '{printf "%.0f", $1/10}')
+type=$(jq -r '.types[0].type.name' "$JSON_FILE" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+
+# Format the output
+echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall."
+

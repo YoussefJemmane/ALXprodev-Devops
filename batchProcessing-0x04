@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Parallel Pokemon Data Fetching Script
+# Fetch multiple Pokemon data simultaneously using background processes
+
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+DATA_DIR="pokemon_data_parallel"
+BASE_URL="https://pokeapi.co/api/v2/pokemon"
+MAX_RETRIES=3
+
+# Create data directory if it doesn't exist
+mkdir -p "$DATA_DIR"
+
+# Function to fetch Pokemon data with retry logic
+fetch_pokemon_parallel() {
+    local pokemon=$1
+    local output_file="$DATA_DIR/${pokemon}.json"
+    local url="$BASE_URL/$pokemon"
+    local retries=0
+    
+    echo "Starting parallel fetch for $pokemon..."
+    
+    while [ $retries -lt $MAX_RETRIES ]; do
+        if curl -s -f "$url" -o "$output_file"; then
+            echo "✅ Successfully fetched data for $pokemon -> $output_file"
+            return 0
+        else
+            retries=$((retries + 1))
+            if [ $retries -lt $MAX_RETRIES ]; then
+                echo "Retry $retries/$MAX_RETRIES for $pokemon..."
+                sleep 1
+            fi
+        fi
+    done
+    
+    echo "$(date): Failed to fetch data for $pokemon after $MAX_RETRIES attempts" >> errors_parallel.txt
+    echo "❌ Failed to fetch data for $pokemon after $MAX_RETRIES attempts"
+    return 1
+}
+
+# Start parallel processes
+echo "Starting parallel data fetching for ${#POKEMON_LIST[@]} Pokemon..."
+pids=()
+
+for pokemon in "${POKEMON_LIST[@]}"; do
+    fetch_pokemon_parallel "$pokemon" &
+    pids+=($!)
+done
+
+# Wait for all background processes to complete
+echo "Waiting for all parallel processes to complete..."
+failed_count=0
+
+for i in "${!pids[@]}"; do
+    pid=${pids[$i]}
+    pokemon=${POKEMON_LIST[$i]}
+    
+    if wait $pid; then
+        echo "Process for $pokemon completed successfully"
+    else
+        echo "Process for $pokemon failed"
+        failed_count=$((failed_count + 1))
+    fi
+done
+
+# Summary
+total_pokemon=${#POKEMON_LIST[@]}
+successful_count=$((total_pokemon - failed_count))
+
+echo ""
+echo "=== Parallel Fetching Summary ==="
+echo "Total Pokemon: $total_pokemon"
+echo "Successful: $successful_count"
+echo "Failed: $failed_count"
+echo ""
+
+if [ $failed_count -eq 0 ]; then
+    echo "🎉 All Pokemon data fetched successfully!"
+else
+    echo "⚠️  Some Pokemon data failed to fetch. Check errors_parallel.txt for details."
+fi
+
+# List downloaded files
+echo ""
+echo "Downloaded files:"
+ls -la "$DATA_DIR"/*.json 2>/dev/null || echo "No files downloaded."
+

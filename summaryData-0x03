@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Pokemon Data Summary Script
+# Generate CSV report and calculate averages
+
+DATA_DIR="pokemon_data"
+CSV_FILE="pokemon_report.csv"
+
+# Check if data directory exists
+if [ ! -d "$DATA_DIR" ]; then
+    echo "Error: $DATA_DIR directory not found. Please run batch processing script first."
+    exit 1
+fi
+
+# Create CSV header
+echo "Name,Height (m),Weight (kg)" > "$CSV_FILE"
+
+# Process each JSON file and extract data
+for json_file in "$DATA_DIR"/*.json; do
+    if [ -f "$json_file" ]; then
+        name=$(jq -r '.name' "$json_file" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+        height=$(jq -r '.height' "$json_file" | awk '{printf "%.1f", $1/10}')
+        weight=$(jq -r '.weight' "$json_file" | awk '{printf "%.1f", $1/10}')
+        
+        echo "$name,$height,$weight" >> "$CSV_FILE"
+    fi
+done
+
+echo "CSV Report generated at: $CSV_FILE"
+echo ""
+
+# Display the CSV content
+cat "$CSV_FILE"
+echo ""
+
+# Calculate averages using awk
+awk -F',' '
+NR > 1 {
+    height_sum += $2
+    weight_sum += $3
+    count++
+}
+END {
+    if (count > 0) {
+        avg_height = height_sum / count
+        avg_weight = weight_sum / count
+        printf "Average Height: %.2f m\n", avg_height
+        printf "Average Weight: %.2f kg\n", avg_weight
+    }
+}' "$CSV_FILE"
+

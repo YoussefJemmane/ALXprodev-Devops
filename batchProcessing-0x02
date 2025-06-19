@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Batch Pokemon Data Retrieval Script
+# Fetch data for multiple Pokemon with retry logic
+
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+DATA_DIR="pokemon_data"
+BASE_URL="https://pokeapi.co/api/v2/pokemon"
+DELAY=1  # Delay between requests in seconds
+MAX_RETRIES=3
+
+# Create data directory if it doesn't exist
+mkdir -p "$DATA_DIR"
+
+# Function to fetch Pokemon data with retry logic
+fetch_pokemon_data() {
+    local pokemon=$1
+    local output_file="$DATA_DIR/${pokemon}.json"
+    local url="$BASE_URL/$pokemon"
+    local retries=0
+    
+    echo "Fetching data for $pokemon..."
+    
+    while [ $retries -lt $MAX_RETRIES ]; do
+        if curl -s -f "$url" -o "$output_file"; then
+            echo "Saved data to $output_file ✅"
+            return 0
+        else
+            retries=$((retries + 1))
+            if [ $retries -lt $MAX_RETRIES ]; then
+                echo "Retry $retries/$MAX_RETRIES for $pokemon..."
+                sleep $DELAY
+            fi
+        fi
+    done
+    
+    echo "$(date): Failed to fetch data for $pokemon after $MAX_RETRIES attempts" >> errors.txt
+    echo "❌ Failed to fetch data for $pokemon after $MAX_RETRIES attempts"
+    return 1
+}
+
+# Fetch data for each Pokemon
+for pokemon in "${POKEMON_LIST[@]}"; do
+    fetch_pokemon_data "$pokemon"
+    
+    # Add delay between requests to handle rate limiting
+    if [ "$pokemon" != "${POKEMON_LIST[-1]}" ]; then
+        sleep $DELAY
+    fi
+done
+
+echo "Batch processing completed!"
+
